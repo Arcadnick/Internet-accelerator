@@ -26,7 +26,7 @@
       <tbody>
       {% for s in subs %}
         {% set pct = (s.traffic_used_bytes * 100 / s.traffic_limit_bytes) | round if s.traffic_limit_bytes else 0 %}
-        {% set sub_url = (request.base_url|string).rstrip('/') + '/sub/' + s.sub_token %}
+        {% set sub_url = public_base_url(request) + '/sub/' + s.sub_token %}
         {% set is_online = s.id in online_sub_ids %}
         <tr>
           <td class="muted">{{ s.id }}</td>

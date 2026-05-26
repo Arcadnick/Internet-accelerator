@@ -8,6 +8,7 @@ from app.db import get_db
 from app.models import Subscription, User
 from app.schemas.subscription import SubscriptionPublic
 from app.security import get_current_user
+from app.web import public_base_url
 
 router = APIRouter(prefix="/api/me", tags=["dashboard"])
 
@@ -27,7 +28,7 @@ async def my_subscriptions(
         .scalars()
         .all()
     )
-    base = str(request.base_url).rstrip("/")
+    base = public_base_url(request)
     return [
         SubscriptionPublic(
             expires_at=s.expires_at,
@@ -56,7 +57,7 @@ async def subscription_qr(
     import qrcode
     from fastapi.responses import Response
 
-    base = str(request.base_url).rstrip("/")
+    base = public_base_url(request)
     url = f"{base}/sub/{sub.sub_token}"
     img = qrcode.make(url)
     buf = io.BytesIO()

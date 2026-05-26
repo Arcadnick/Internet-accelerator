@@ -42,8 +42,24 @@ def _happ_deeplink(sub_url: str) -> str:
     return f"happ://add/{quote(sub_url, safe='')}"
 
 
+def public_base_url(request: Request) -> str:
+    """Return the externally-visible base URL.
+
+    In production we serve behind Caddy on HTTPS — the request's own
+    `base_url` would reflect the internal http://panel-api:8000 unless
+    every X-Forwarded-* header is honoured perfectly. Hardcoding from
+    settings avoids that fragility entirely. Subscription links always
+    need https:// (clients like Happ refuse plain http).
+    """
+    s = get_settings()
+    if s.env != "dev":
+        return f"https://{s.panel_host}"
+    return str(request.base_url).rstrip("/")
+
+
 templates.env.globals["format_bytes"] = _format_bytes
 templates.env.globals["happ_deeplink"] = _happ_deeplink
+templates.env.globals["public_base_url"] = public_base_url
 
 
 def render(
@@ -110,7 +126,7 @@ async def root(
         .scalars()
         .all()
     )
-    base = str(request.base_url).rstrip("/")
+    base = public_base_url(request)
     for s in subs:
         s.sub_url = f"{base}/sub/{s.sub_token}"  # type: ignore[attr-defined]
     return render(request, "dashboard.html", {"user": user, "subs": subs})
