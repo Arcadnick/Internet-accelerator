@@ -1,0 +1,48 @@
+# Production overlay. Apply alongside docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Diff vs base:
+#   * Caddy in front (auto-TLS via Let's Encrypt for $PANEL_HOST)
+#   * panel-api no longer published to 0.0.0.0:8000 — only Caddy talks to it
+#   * Panel XRay config volume bind-mounted from host so the host-side
+#     xray-watcher.service can pick up changes
+#   * Postgres/Redis volumes use named volumes (bind-mounting them is fragile)
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - panel-api
+    environment:
+      PANEL_HOST: ${PANEL_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+
+  panel-api:
+    # Drop the public port mapping; Caddy proxies to us on the internal network.
+    ports: !reset []
+    volumes:
+      # Replace the named volume with a bind mount so xray-watcher on host
+      # (installed by scripts/install_panel.sh) sees changes.
+      - /usr/local/etc/xray:/xray
+    environment:
+      PANEL_XRAY_CONFIG_PATH: /xray/config.json
+
+  arq-worker:
+    volumes:
+      - /usr/local/etc/xray:/xray
+    environment:
+      PANEL_XRAY_CONFIG_PATH: /xray/config.json
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

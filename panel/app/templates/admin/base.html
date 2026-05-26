@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% block body %}
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="brand-block">
+      <a href="/admin" class="brand-link">
+        <span class="brand-mark">VP</span>
+        <span>{{ t('brand') }}</span>
+      </a>
+    </div>
+
+    <a href="/admin" class="nav-item {{ 'active' if active == 'dashboard' }}">
+      {{ icon('home') }} {{ t('nav.dashboard') }}
+    </a>
+
+    <div class="section-label">{{ t('nav.section.infra') }}</div>
+    <a href="/admin/nodes"           class="nav-item {{ 'active' if active == 'nodes'     }}">
+      {{ icon('globe') }} {{ t('nav.nodes') }}
+    </a>
+    <a href="/admin/nodes/provision" class="nav-item {{ 'active' if active == 'provision' }}">
+      {{ icon('zap') }} {{ t('nav.add_node') }}
+    </a>
+
+    <div class="section-label">{{ t('nav.section.access') }}</div>
+    <a href="/admin/plans"         class="nav-item {{ 'active' if active == 'plans'         }}">
+      {{ icon('package') }} {{ t('nav.plans') }}
+    </a>
+    <a href="/admin/users"         class="nav-item {{ 'active' if active == 'users'         }}">
+      {{ icon('users') }} {{ t('nav.users') }}
+    </a>
+    <a href="/admin/subscriptions" class="nav-item {{ 'active' if active == 'subscriptions' }}">
+      {{ icon('key') }} {{ t('nav.subscriptions') }}
+    </a>
+
+    <div class="footer">
+      <div class="userbox">
+        <span class="dot online"></span>
+        <span class="soft">{{ admin.email if admin else 'admin' }}</span>
+      </div>
+      <a href="/logout" class="btn ghost btn-sm" style="justify-content:center">
+        {{ icon('log-out') }} {{ t('common.sign_out') }}
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="lang-switcher">
+        {% for code in locales %}
+          <a href="/lang/{{ code }}" class="{{ 'current' if code == locale }}">{{ t('lang.' + code) }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="content">
+      {% if flash %}
+      <div class="flash {{ flash.kind }}">{{ flash.message }}</div>
+      {% endif %}
+      {% block admin_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

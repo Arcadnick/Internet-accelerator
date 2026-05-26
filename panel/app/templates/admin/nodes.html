@@ -1,0 +1,106 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% set active = 'nodes' %}
+{% block title %}{{ t('nodes.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="card-header">
+  <h1>{{ t('nodes.title') }}</h1>
+</div>
+
+{% if nodes %}
+<div class="card flat" style="padding:0; margin-bottom:1.5rem">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">ID</th>
+          <th>{{ t('nodes.col.country') }}</th>
+          <th>{{ t('nodes.col.label') }}</th>
+          <th>{{ t('nodes.col.host') }}</th>
+          <th>{{ t('nodes.col.inbound') }}</th>
+          <th>{{ t('nodes.col.status') }}</th>
+          <th>{{ t('nodes.col.created') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for n in nodes %}
+        <tr>
+          <td class="muted">{{ n.id }}</td>
+          <td><strong>{{ n.country_code }}</strong></td>
+          <td>{{ n.label }}</td>
+          <td><code>{{ n.host }}</code></td>
+          <td><code>:{{ n.panel_inbound_port }}</code> <span class="soft">{{ n.panel_inbound_tag }}</span></td>
+          <td><span class="badge {{ n.status.value }}">{{ t('status.' + n.status.value) }}</span></td>
+          <td class="soft">{{ n.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td>
+            <div class="actions">
+              <form method="post" action="/admin/nodes/{{ n.id }}/delete" style="margin:0"
+                    hx-confirm="{{ t('nodes.confirm_delete', label=n.label) }}">
+                <button class="danger btn-sm" type="submit">{{ icon('trash') }} {{ t('common.delete') }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="empty">
+    {{ icon('globe', size=48, cls='ic-empty') }}
+    <h3>{{ t('nodes.empty.title') }}</h3>
+    <p>{{ t('nodes.empty.hint') }}</p>
+    <a href="/admin/nodes/provision" class="btn primary" style="margin-top:0.85rem">
+      {{ icon('zap') }} {{ t('nav.add_node') }}
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><h3>{{ icon('plus') }} {{ t('nodes.add_manual') }}</h3></div>
+  <p class="muted" style="margin-top:0">
+    {{ t('nodes.add_manual.hint',
+          auto='<a href="/admin/nodes/provision">' + t('nodes.add_manual.hint.auto') + '</a>')|safe }}
+  </p>
+  <form method="post" action="/admin/nodes" class="stack">
+    <div class="field-row cols-2-1">
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>{{ t('nodes.field.country_code') }}</label>
+          <input name="country_code" required placeholder="DE" maxlength="8">
+        </div>
+        <div class="field">
+          <label>{{ t('nodes.field.label') }}</label>
+          <input name="label" required placeholder="Frankfurt">
+        </div>
+      </div>
+      <div class="field">
+        <label>{{ t('nodes.field.ssh_port') }}</label>
+        <input name="ssh_port" type="number" value="22" min="1" max="65535">
+      </div>
+    </div>
+    <div class="field">
+      <label>{{ t('nodes.field.host') }}</label>
+      <input name="host" required placeholder="de1.example.com">
+    </div>
+    <div class="field">
+      <label>{{ t('nodes.field.s2s_password') }}<span class="hint">— {{ t('nodes.field.s2s_password.hint') }}</span></label>
+      <input name="s2s_password" required minlength="8">
+    </div>
+    <div class="field-row cols-2-1">
+      <div class="field">
+        <label>{{ t('nodes.field.s2s_sni') }}</label>
+        <input name="s2s_sni" required placeholder="de1.example.com">
+      </div>
+      <div class="field" style="align-self:end">
+        <label style="margin-bottom:0.6rem"><input type="checkbox" name="s2s_allow_insecure" value="1"> {{ t('nodes.field.allow_insecure') }}</label>
+      </div>
+    </div>
+    <div><button class="primary" type="submit">{{ icon('plus') }} {{ t('common.add') }}</button></div>
+  </form>
+</div>
+{% endblock %}

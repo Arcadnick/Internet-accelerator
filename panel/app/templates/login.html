@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ t('login.title') }} · {{ t('brand') }}{% endblock %}
+{% block body %}
+<div class="centered">
+  <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:1.5rem">
+    <span class="brand-mark">VP</span>
+    <strong style="font-size:1.1rem">{{ t('brand') }}</strong>
+  </div>
+
+  <div class="card">
+    <div class="stack">
+      <h2 style="text-align:center;margin-bottom:0.5rem">{{ t('login.title') }}</h2>
+      <form method="post" action="/login" class="stack">
+        <div class="field">
+          <label for="email">{{ t('login.email') }}</label>
+          <input id="email" name="email" type="email" required autocomplete="email" autofocus>
+        </div>
+        <div class="field">
+          <label for="password">{{ t('login.password') }}</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password">
+        </div>
+        {% if error %}
+        <div class="flash error">{{ error }}</div>
+        {% endif %}
+        <button type="submit" class="primary" style="width:100%; justify-content:center">
+          {{ t('login.submit') }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="lang-switcher" style="margin-top:1.25rem">
+    {% for code in locales %}
+      <a href="/lang/{{ code }}" class="{{ 'current' if code == locale }}">{{ t('lang.' + code) }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

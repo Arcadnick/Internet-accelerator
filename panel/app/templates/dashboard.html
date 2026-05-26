@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ t('my.title') }} · {{ t('brand') }}{% endblock %}
+{% block body %}
+<div class="topbar">
+  <a href="/" class="brand-link"><span class="brand-mark">VP</span> {{ t('brand') }}</a>
+  <div class="row" style="gap:1rem">
+    <div class="lang-switcher">
+      {% for code in locales %}
+        <a href="/lang/{{ code }}" class="{{ 'current' if code == locale }}">{{ code|upper }}</a>
+      {% endfor %}
+    </div>
+    <span class="soft">{{ user.email }}</span>
+    <a href="/logout" class="btn ghost btn-sm">{{ t('common.sign_out') }}</a>
+  </div>
+</div>
+
+<div class="page">
+  <h1 style="margin-bottom:1.25rem">{{ t('my.title') }}</h1>
+
+  {% if not subs %}
+    <div class="card">
+      <div class="empty">
+        <div class="icon">📭</div>
+        <h3>{{ t('my.empty.title') }}</h3>
+        <p>{{ t('my.empty.hint') }}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="stack">
+  {% for s in subs %}
+    {% set pct = (s.traffic_used_bytes * 100 / s.traffic_limit_bytes) | round if s.traffic_limit_bytes else 0 %}
+    <div class="card">
+      <div class="card-header">
+        <h3>#{{ s.id }}</h3>
+        <span class="badge {{ s.status.value }}">{{ t('status.' + s.status.value) }}</span>
+      </div>
+
+      <div class="field-row cols-2" style="margin-bottom:1rem">
+        <div>
+          <div class="soft">{{ t('my.expires') }}</div>
+          <div>{{ s.expires_at.strftime("%Y-%m-%d %H:%M UTC") if s.expires_at else t('common.never') }}</div>
+        </div>
+        <div>
+          <div class="soft">{{ t('my.traffic') }}</div>
+          <div>
+            {{ format_bytes(s.traffic_used_bytes) }} /
+            {{ format_bytes(s.traffic_limit_bytes) if s.traffic_limit_bytes else t('common.unlimited') }}
+          </div>
+          {% if s.traffic_limit_bytes %}
+          <div class="progress">
+            <div class="{{ 'danger' if pct >= 90 else 'warn' if pct >= 75 else '' }}"
+                 style="width:{{ pct if pct < 100 else 100 }}%"></div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:0.85rem">
+        <label>{{ t('my.sub_url') }}</label>
+        <div style="display:flex;gap:0.5rem">
+          <input value="{{ s.sub_url }}" readonly onclick="this.select()" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:0.85em">
+          <button type="button" class="btn-sm" onclick="copyText('{{ s.sub_url }}')">{{ t('common.copy') }}</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <a href="{{ happ_deeplink(s.sub_url) }}" class="btn primary">📲 {{ t('my.add_to_happ') }}</a>
+        <a href="/api/me/subscriptions/{{ s.id }}/qr.png" target="_blank" class="btn">🔳 {{ t('my.show_qr') }}</a>
+      </div>
+      <p class="soft" style="margin-top:0.85rem">{{ t('my.scan_hint') }}</p>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

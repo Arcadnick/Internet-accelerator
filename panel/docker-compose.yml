@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-panel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-panel}
+      POSTGRES_DB: ${POSTGRES_DB:-panel}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-panel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  panel-api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-panel}:${POSTGRES_PASSWORD:-panel}@postgres:5432/${POSTGRES_DB:-panel}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      PANEL_HOST: ${PANEL_HOST:-panel.example.com}
+      PANEL_XRAY_API_ADDR: ${PANEL_XRAY_API_ADDR:-host.docker.internal:10085}
+      PANEL_REALITY_PRIVATE_KEY: ${PANEL_REALITY_PRIVATE_KEY:-}
+      PANEL_REALITY_PUBLIC_KEY: ${PANEL_REALITY_PUBLIC_KEY:-}
+      PANEL_XRAY_CONFIG_PATH: /xray/config.json
+    ports:
+      - "8000:8000"
+    volumes:
+      - xray_config:/xray
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000
+             --proxy-headers --forwarded-allow-ips=*"
+
+  arq-worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-panel}:${POSTGRES_PASSWORD:-panel}@postgres:5432/${POSTGRES_DB:-panel}
+      REDIS_URL: redis://redis:6379/0
+      PANEL_XRAY_API_ADDR: ${PANEL_XRAY_API_ADDR:-host.docker.internal:10085}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: arq app.workers.tasks.WorkerSettings
+
+volumes:
+  pg_data:
+  redis_data:
+  xray_config:

@@ -1,0 +1,126 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon, online_dot %}
+{% set active = 'subscriptions' %}
+{% block title %}{{ t('subs.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="card-header">
+  <h1>{{ t('subs.title') }}</h1>
+</div>
+
+{% if subs %}
+<div class="card flat" style="padding:0; margin-bottom:1.5rem">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">ID</th>
+          <th>{{ t('subs.col.user') }}</th>
+          <th>{{ t('subs.col.plan') }}</th>
+          <th>{{ t('subs.col.status') }}</th>
+          <th style="min-width:200px">{{ t('subs.col.traffic') }}</th>
+          <th>{{ t('subs.col.expires') }}</th>
+          <th>{{ t('subs.col.url') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in subs %}
+        {% set pct = (s.traffic_used_bytes * 100 / s.traffic_limit_bytes) | round if s.traffic_limit_bytes else 0 %}
+        {% set sub_url = (request.base_url|string).rstrip('/') + '/sub/' + s.sub_token %}
+        {% set is_online = s.id in online_sub_ids %}
+        <tr>
+          <td class="muted">{{ s.id }}</td>
+          <td>
+            <span class="with-dot">
+              {{ online_dot(is_online) }}
+              {{ users_by_id.get(s.user_id, "?") }}
+            </span>
+          </td>
+          <td>{{ plans_by_id.get(s.plan_id, "—") }}</td>
+          <td><span class="badge {{ s.status.value }}">{{ t('status.' + s.status.value) }}</span></td>
+          <td>
+            <div style="font-size:0.85em" class="with-dot">
+              {{ format_bytes(s.traffic_used_bytes) }} /
+              {% if s.traffic_limit_bytes %}
+                {{ format_bytes(s.traffic_limit_bytes) }}
+              {% else %}
+                {{ icon('infinity') }}
+              {% endif %}
+            </div>
+            {% if s.traffic_limit_bytes %}
+            <div class="progress">
+              <div class="{{ 'danger' if pct >= 90 else 'warn' if pct >= 75 else '' }}"
+                   style="width:{{ pct if pct < 100 else 100 }}%"></div>
+            </div>
+            {% endif %}
+          </td>
+          <td class="soft">
+            {% if s.expires_at %}
+              {{ s.expires_at.strftime("%Y-%m-%d") }}
+            {% else %}
+              <span class="with-dot">{{ icon('infinity') }} {{ t('common.never_expires') }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <button type="button" class="btn-sm ghost" onclick="copyText('{{ sub_url }}')" title="{{ t('common.copy') }}">
+              {{ icon('copy') }} <code style="font-size:0.85em">{{ s.sub_token[:8] }}…</code>
+            </button>
+          </td>
+          <td>
+            <div class="actions">
+              <a href="/admin/subscriptions/{{ s.id }}/edit" class="btn btn-sm">{{ icon('edit') }} {{ t('common.edit') }}</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="empty">
+    {{ icon('key', size=48, cls='ic-empty') }}
+    <h3>{{ t('subs.empty.title') }}</h3>
+    <p>{{ t('subs.empty.hint') }}</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><h3>{{ icon('plus') }} {{ t('subs.add') }}</h3></div>
+  {% set user_options = users | selectattr('role.value','equalto','user') | list %}
+  {% if not user_options or not active_plans %}
+    <p class="muted">
+      {% if not user_options %}{{ t('subs.need_user') }}{% endif %}
+      {% if not active_plans %} {{ t('subs.need_plan') }}{% endif %}
+    </p>
+  {% else %}
+  <form method="post" action="/admin/subscriptions" class="stack">
+    <div class="field-row cols-2">
+      <div class="field">
+        <label>{{ t('subs.field.user') }}</label>
+        <select name="user_id" required>
+          {% for u in user_options %}
+            <option value="{{ u.id }}">{{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>{{ t('subs.field.plan') }}</label>
+        <select name="plan_id" required>
+          {% for p in active_plans %}
+            <option value="{{ p.id }}">
+              {{ p.name }} —
+              {{ format_bytes(p.traffic_bytes) if p.traffic_bytes else t('common.unlimited') }},
+              {{ t('plans.duration_days', n=p.duration_days) if p.duration_days else t('plans.duration_never') }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div><button class="primary" type="submit">{{ icon('plus') }} {{ t('common.create') }}</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

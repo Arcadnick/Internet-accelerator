@@ -1,0 +1,94 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% set active = 'plans' %}
+{% block title %}{{ t('plans.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="card-header">
+  <h1>{{ t('plans.title') }}</h1>
+</div>
+
+{% if plans %}
+<div class="card flat" style="padding:0; margin-bottom:1.5rem">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">ID</th>
+          <th>{{ t('plans.col.name') }}</th>
+          <th>{{ t('plans.col.traffic') }}</th>
+          <th>{{ t('plans.col.duration') }}</th>
+          <th>{{ t('plans.col.price') }}</th>
+          <th>{{ t('plans.col.active') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in plans %}
+        <tr>
+          <td class="muted">{{ p.id }}</td>
+          <td><strong>{{ p.name }}</strong></td>
+          <td>
+            {% if p.traffic_bytes %}
+              {{ format_bytes(p.traffic_bytes) }}
+            {% else %}
+              <span class="with-dot">{{ icon('infinity') }} {{ t('common.unlimited') }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.duration_days %}
+              {{ t('plans.duration_days', n=p.duration_days) }}
+            {% else %}
+              <span class="with-dot">{{ icon('infinity') }} {{ t('plans.duration_never') }}</span>
+            {% endif %}
+          </td>
+          <td>{{ p.price }}</td>
+          <td>{{ t('common.yes') if p.is_active else t('common.no') }}</td>
+          <td>
+            <div class="actions">
+              <form method="post" action="/admin/plans/{{ p.id }}/delete" style="margin:0"
+                    hx-confirm="{{ t('plans.confirm_delete', name=p.name) }}">
+                <button class="danger btn-sm" type="submit">{{ icon('trash') }} {{ t('common.delete') }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="empty">
+    {{ icon('package', size=48, cls='ic-empty') }}
+    <h3>{{ t('plans.empty.title') }}</h3>
+    <p>{{ t('plans.empty.hint') }}</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><h3>{{ icon('plus') }} {{ t('plans.add') }}</h3></div>
+  <form method="post" action="/admin/plans" class="stack">
+    <div class="field">
+      <label>{{ t('plans.field.name') }}</label>
+      <input name="name" required placeholder="Basic 50 GB">
+    </div>
+    <div class="field-row cols-3">
+      <div class="field">
+        <label>{{ t('plans.field.traffic_gb') }}<span class="hint">— {{ t('plans.field.traffic_gb.hint') }}</span></label>
+        <input name="traffic_gb" type="number" min="0" step="1" required value="50">
+      </div>
+      <div class="field">
+        <label>{{ t('plans.field.duration_days') }}<span class="hint">— {{ t('plans.field.duration_days.hint') }}</span></label>
+        <input name="duration_days" type="number" min="0" required value="30">
+      </div>
+      <div class="field">
+        <label>{{ t('plans.field.price') }}<span class="hint">— {{ t('plans.field.price.hint') }}</span></label>
+        <input name="price" type="number" min="0" step="0.01" value="0">
+      </div>
+    </div>
+    <div><button class="primary" type="submit">{{ icon('plus') }} {{ t('common.add') }}</button></div>
+  </form>
+</div>
+{% endblock %}

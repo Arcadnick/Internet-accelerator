@@ -1,0 +1,133 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon, online_dot %}
+{% set active = 'dashboard' %}
+{% block title %}{{ t('dashboard.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<h1 style="margin-bottom:0.35rem">{{ t('dashboard.overview') }}</h1>
+<p class="muted" style="margin-top:0;margin-bottom:1.5rem">{{ t('dashboard.quick_start') }} ↓</p>
+
+<div class="stats-grid" style="margin-bottom:1.75rem">
+  {% for s in stats %}
+  <div class="stat-tile">
+    <div class="label">{{ t(s.label_key) }}</div>
+    <div class="value">{{ s.value }}</div>
+    {% if s.hint_key %}<div class="hint">{{ t(s.hint_key) }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="detail-grid">
+
+  {# --- Online now --- #}
+  <div class="card detail-card">
+    <h3>{{ icon('wifi') }} {{ t('dashboard.online_now') }}</h3>
+    {% if online_subs %}
+      {% for s in online_subs %}
+      <div class="list-row">
+        <div class="main">
+          <div class="top with-dot">{{ online_dot(true) }} {{ s.email }}</div>
+          <div class="bottom">#{{ s.id }}</div>
+        </div>
+        <div class="meta">{{ s.last_seen_at.strftime("%H:%M:%S") }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-mini">{{ t('dashboard.online_now.empty') }}</div>
+    {% endif %}
+  </div>
+
+  {# --- Top users --- #}
+  <div class="card detail-card">
+    <h3>{{ icon('trending-up') }} {{ t('dashboard.top_users') }}</h3>
+    {% if top_users %}
+      {% for u in top_users %}
+      <div class="list-row">
+        <div class="main">
+          <div class="top with-dot">{{ online_dot(u.is_online) }} {{ u.email }}</div>
+          <div class="bottom">
+            {{ u.used_human }}{% if u.limit_human %} / {{ u.limit_human }}{% endif %}
+          </div>
+        </div>
+        <div class="meta"><a href="/admin/subscriptions/{{ u.id }}/edit" class="ghost btn-sm" style="padding:0.2rem 0.5rem">{{ icon('edit') }}</a></div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-mini">{{ t('dashboard.top_users.empty') }}</div>
+    {% endif %}
+  </div>
+
+  {# --- Expiring soon --- #}
+  <div class="card detail-card">
+    <h3>{{ icon('clock') }} {{ t('dashboard.expiring_soon') }}</h3>
+    {% if expiring_soon %}
+      {% for s in expiring_soon %}
+      <div class="list-row">
+        <div class="main">
+          <div class="top">{{ s.email }}</div>
+          <div class="bottom">#{{ s.id }}</div>
+        </div>
+        <div class="meta">{{ s.expires_at.strftime("%Y-%m-%d") }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-mini">{{ t('dashboard.expiring_soon.empty') }}</div>
+    {% endif %}
+  </div>
+
+  {# --- Recent subs --- #}
+  <div class="card detail-card">
+    <h3>{{ icon('key') }} {{ t('dashboard.recent_subs') }}</h3>
+    {% if recent_subs %}
+      {% for s in recent_subs %}
+      <div class="list-row">
+        <div class="main">
+          <div class="top">{{ s.email }}</div>
+          <div class="bottom"><span class="badge {{ s.status.value }}">{{ t('status.' + s.status.value) }}</span></div>
+        </div>
+        <div class="meta">{{ s.created_at.strftime("%Y-%m-%d") }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-mini">{{ t('dashboard.recent_subs.empty') }}</div>
+    {% endif %}
+  </div>
+
+  {# --- Recent events --- #}
+  <div class="card detail-card" style="grid-column: 1 / -1">
+    <h3>{{ icon('activity') }} {{ t('dashboard.recent_events') }}</h3>
+    {% if recent_events %}
+      {% for ev in recent_events %}
+      <div class="list-row">
+        <div class="main">
+          <div class="top">
+            <span class="badge {{ 'danger' if ev.level == 'error' else 'warning' if ev.level == 'warn' else 'info' }}">
+              {{ ev.level }}
+            </span>
+            {{ ev.message }}
+          </div>
+          <div class="bottom">{{ ev.node }}</div>
+        </div>
+        <div class="meta">{{ ev.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-mini">{{ t('dashboard.recent_events.empty') }}</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<div class="card" style="margin-top:1.5rem">
+  <h3 style="margin-bottom:0.85rem">{{ t('dashboard.quick_start') }}</h3>
+  <ol style="margin:0; padding-left:1.25rem; line-height:1.9">
+    <li>{{ t('dashboard.qs.1',
+              manually='<a href="/admin/nodes">' + t('dashboard.qs.1.manually') + '</a>',
+              auto='<a href="/admin/nodes/provision">' + t('dashboard.qs.1.auto') + '</a>')|safe }}</li>
+    <li>{{ t('dashboard.qs.2', plans='<a href="/admin/plans">' + t('dashboard.qs.2.plans') + '</a>')|safe }}</li>
+    <li>{{ t('dashboard.qs.3',
+              users='<a href="/admin/users">' + t('dashboard.qs.3.users') + '</a>',
+              subs='<a href="/admin/subscriptions">' + t('dashboard.qs.3.subs') + '</a>')|safe }}</li>
+    <li>{{ t('dashboard.qs.4') }}</li>
+  </ol>
+</div>
+{% endblock %}

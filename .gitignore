@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+.env
+.env.prod
+.env.local
+*.db
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+panel/proto/*_pb2.py
+panel/proto/*_pb2_grpc.py
+panel/proto/*_pb2.pyi

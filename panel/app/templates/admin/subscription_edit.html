@@ -1,0 +1,97 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% set active = 'subscriptions' %}
+{% block title %}{{ t('subs.edit.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="row" style="margin-bottom:1.25rem">
+  <a href="/admin/subscriptions" class="btn ghost btn-sm">{{ icon('arrow-left') }} {{ t('common.back') }}</a>
+</div>
+
+<h1 style="margin-bottom:0.25rem">{{ t('subs.edit.title') }} #{{ sub.id }}</h1>
+<p class="muted" style="margin-top:0;margin-bottom:1.25rem">{{ user.email if user else '—' }}</p>
+
+<div class="card" style="max-width:680px">
+  <form method="post" action="/admin/subscriptions/{{ sub.id }}/edit" class="stack" id="sub-edit-form">
+    <div class="field-row cols-2">
+      <div class="field">
+        <label>{{ t('subs.field.plan') }}</label>
+        <select name="plan_id" required>
+          {% for p in plans %}
+            <option value="{{ p.id }}" {{ 'selected' if current_plan and p.id == current_plan.id }}>
+              {{ p.name }} — {{ format_bytes(p.traffic_bytes) if p.traffic_bytes else t('common.unlimited') }},
+              {{ t('plans.duration_days', n=p.duration_days) if p.duration_days else t('plans.duration_never') }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>{{ t('subs.field.status') }}</label>
+        <select name="status">
+          {% for s in ['active', 'disabled'] %}
+            <option value="{{ s }}" {{ 'selected' if sub.status.value == s }}>{{ t('status.' + s) }}</option>
+          {% endfor %}
+          {# expired / over_limit are auto-set by the billing job — show but disable #}
+          {% if sub.status.value in ('expired', 'over_limit') %}
+            <option value="{{ sub.status.value }}" selected disabled>{{ t('status.' + sub.status.value) }}</option>
+          {% endif %}
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>{{ t('subs.field.traffic_limit_gb') }}
+        <span class="hint">— {{ t('subs.field.traffic_limit_gb.hint') }}</span>
+      </label>
+      <input name="traffic_limit_gb" type="number" min="0" step="0.5"
+             value="{{ '%.2f'|format(sub.traffic_limit_bytes / 1024 / 1024 / 1024) }}">
+      <p class="soft" style="margin:0.5rem 0 0">
+        {{ t('subs.field.traffic_used') }}:
+        {{ format_bytes(sub.traffic_used_bytes) }} /
+        {{ format_bytes(sub.traffic_limit_bytes) if sub.traffic_limit_bytes else t('common.unlimited') }}
+      </p>
+    </div>
+
+    <div class="field">
+      <label>{{ t('subs.field.expires_at') }}</label>
+      <input name="expires_at" type="datetime-local" id="expires_at_input"
+             value="{{ sub.expires_at.strftime('%Y-%m-%dT%H:%M') if sub.expires_at else '' }}">
+      <label style="margin-top:0.6rem; display:flex; align-items:center; gap:0.4rem; font-weight:400">
+        <input type="checkbox" name="never_expires" value="1" id="never-expires-cb"
+               {{ 'checked' if sub.expires_at is none }}>
+        {{ icon('infinity') }} {{ t('subs.field.never_expires') }}
+      </label>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400">
+      <input type="checkbox" name="reset_traffic" value="1">
+      {{ icon('rotate-ccw') }} {{ t('subs.action.reset_traffic') }}
+    </label>
+
+    {% if current_plan and current_plan.duration_days > 0 %}
+    <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400">
+      <input type="checkbox" name="extend_by_plan" value="1">
+      {{ icon('calendar') }} {{ t('subs.action.extend_by_plan', n=current_plan.duration_days) }}
+    </label>
+    {% endif %}
+
+    <div class="row" style="justify-content:space-between; margin-top:0.5rem">
+      <button class="primary" type="submit">{{ icon('save') }} {{ t('common.save') }}</button>
+      <form method="post" action="/admin/subscriptions/{{ sub.id }}/delete" style="margin:0"
+            hx-confirm="{{ t('subs.confirm_delete', id=sub.id) }}">
+        <button class="danger" type="submit">{{ icon('trash') }} {{ t('common.delete') }}</button>
+      </form>
+    </div>
+  </form>
+</div>
+
+<script>
+  // disable date picker when "never expires" is checked
+  (() => {
+    const cb = document.getElementById('never-expires-cb');
+    const date = document.getElementById('expires_at_input');
+    function sync() { date.disabled = cb.checked; if (cb.checked) date.value = ''; }
+    cb.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+{% endblock %}

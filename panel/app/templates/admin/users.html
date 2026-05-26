@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon, online_dot %}
+{% set active = 'users' %}
+{% block title %}{{ t('users.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="card-header">
+  <h1>{{ t('users.title') }}</h1>
+</div>
+
+<div class="card flat" style="padding:0; margin-bottom:1.5rem">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">ID</th>
+          <th>{{ t('users.col.email') }}</th>
+          <th>{{ t('users.col.role') }}</th>
+          <th>{{ t('users.col.active') }}</th>
+          <th>{{ t('users.col.subs') }}</th>
+          <th>{{ t('users.col.last_seen') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for u in users %}
+        {% set is_online = u.id in online_user_ids %}
+        {% set ls = last_seen.get(u.id) %}
+        <tr>
+          <td class="muted">{{ u.id }}</td>
+          <td>
+            <span class="with-dot">
+              {{ online_dot(is_online) }}
+              <strong>{{ u.email }}</strong>
+            </span>
+          </td>
+          <td>
+            <span class="badge {{ 'info' if u.role.value == 'admin' else 'plain' }}">
+              {{ t('users.role.' + u.role.value) }}
+            </span>
+          </td>
+          <td>{{ t('common.yes') if u.is_active else t('common.no') }}</td>
+          <td class="soft">{{ sub_counts.get(u.id, 0) }}</td>
+          <td class="soft">
+            {% if is_online %}
+              <span style="color:var(--success); font-weight:500">{{ t('common.online') }}</span>
+            {% elif ls %}
+              {{ ls.strftime("%Y-%m-%d %H:%M") }}
+            {% else %}
+              {{ t('users.never_seen') }}
+            {% endif %}
+          </td>
+          <td>
+            <div class="actions">
+              <a href="/admin/users/{{ u.id }}/edit" class="btn btn-sm">{{ icon('edit') }} {{ t('common.edit') }}</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3>{{ icon('plus') }} {{ t('users.add') }}</h3></div>
+  <form method="post" action="/admin/users" class="stack">
+    <div class="field-row cols-2">
+      <div class="field">
+        <label>{{ t('users.field.email') }}</label>
+        <input name="email" type="email" required placeholder="user@example.com">
+      </div>
+      <div class="field">
+        <label>{{ t('users.field.password') }}</label>
+        <input name="password" type="password" required minlength="4">
+      </div>
+    </div>
+    <div><button class="primary" type="submit">{{ icon('plus') }} {{ t('common.add') }}</button></div>
+  </form>
+</div>
+{% endblock %}

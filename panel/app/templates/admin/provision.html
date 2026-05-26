@@ -1,0 +1,160 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% set active = 'provision' %}
+{% block title %}{{ t('provision.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<h1 style="margin-bottom:1.25rem">{{ t('provision.title') }}</h1>
+
+<div class="card" style="margin-bottom:1.25rem">
+  <p class="muted" style="margin:0">{{ t('provision.intro') }}</p>
+</div>
+
+<div class="card">
+  <form id="provision-form" class="stack">
+    <div class="field-row cols-2">
+      <div class="field">
+        <label>{{ t('nodes.field.country_code') }}</label>
+        <input name="country_code" required placeholder="DE" maxlength="8">
+      </div>
+      <div class="field">
+        <label>{{ t('nodes.field.label') }}</label>
+        <input name="label" required placeholder="Frankfurt">
+      </div>
+    </div>
+    <div class="field-row cols-2-1">
+      <div class="field">
+        <label>{{ t('nodes.field.host') }}</label>
+        <input name="host" required placeholder="1.2.3.4 / de1.example.com">
+      </div>
+      <div class="field">
+        <label>{{ t('nodes.field.ssh_port') }}</label>
+        <input name="ssh_port" type="number" value="22" min="1" max="65535">
+      </div>
+    </div>
+    <div class="field-row cols-2">
+      <div class="field">
+        <label>{{ t('provision.field.ssh_user') }}</label>
+        <input name="ssh_user" value="root">
+      </div>
+      <div class="field">
+        <label>{{ t('provision.field.ssh_password') }}<span class="hint">— {{ t('provision.field.ssh_password.hint') }}</span></label>
+        <input name="ssh_password" type="password" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label>{{ t('provision.field.ssh_private_key') }}<span class="hint">— {{ t('provision.field.ssh_private_key.hint') }}</span></label>
+      <textarea name="ssh_private_key" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."></textarea>
+    </div>
+    <div class="field">
+      <label>{{ t('provision.field.admin_ssh_key') }}<span class="hint">— {{ t('provision.field.admin_ssh_key.hint') }}</span></label>
+      <input name="admin_ssh_key" placeholder="ssh-ed25519 AAAA... admin@laptop">
+    </div>
+    <div class="field">
+      <label>{{ t('provision.field.panel_ip') }}<span class="hint">— {{ t('provision.field.panel_ip.hint') }}</span></label>
+      <input name="panel_ip" placeholder="">
+    </div>
+    <div>
+      <button class="primary" type="submit" id="submit-btn">
+        {{ icon('zap') }} {{ t('provision.start') }}
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="card" id="result-card" style="display:none; margin-top:1.25rem">
+  <div class="card-header">
+    <h3>{{ t('provision.log_title') }}</h3>
+    <div id="result-status"></div>
+  </div>
+  <pre id="log"></pre>
+</div>
+
+<script>
+(function() {
+  const form = document.getElementById('provision-form');
+  const card = document.getElementById('result-card');
+  const log  = document.getElementById('log');
+  const status = document.getElementById('result-status');
+  const btn  = document.getElementById('submit-btn');
+
+  const I18N = {
+    failed: {{ t('provision.failed')|tojson }},
+    view_nodes: {{ t('provision.view_nodes')|tojson }},
+    success_tpl: {{ t('provision.success')|tojson }},
+  };
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    for (const k of ['ssh_password','ssh_private_key','admin_ssh_key','panel_ip']) {
+      if (!data[k]) delete data[k];
+    }
+    data.ssh_port = parseInt(data.ssh_port, 10);
+
+    card.style.display = '';
+    log.textContent = '';
+    status.innerHTML = '<span class="badge provisioning">running…</span>';
+    btn.disabled = true;
+
+    try {
+      const resp = await fetch('/admin/nodes/provision', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+      });
+      if (!resp.ok || !resp.body) {
+        log.textContent += `HTTP ${resp.status}: ${await resp.text()}\n`;
+        status.innerHTML = `<span class="badge error">${I18N.failed}</span>`;
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const chunk = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          handleEvent(chunk);
+        }
+      }
+    } catch (e) {
+      log.textContent += `\nFetch error: ${e}\n`;
+      status.innerHTML = `<span class="badge error">${I18N.failed}</span>`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function handleEvent(chunk) {
+    let event = 'message', dataLines = [];
+    for (const line of chunk.split('\n')) {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+    }
+    if (!dataLines.length) return;
+    let payload;
+    try { payload = JSON.parse(dataLines.join('\n')); } catch { payload = {raw: dataLines.join('\n')}; }
+    if (event === 'log') {
+      log.textContent += (payload.line || JSON.stringify(payload)) + '\n';
+      log.scrollTop = log.scrollHeight;
+    } else if (event === 'error') {
+      log.textContent += `[ERROR] ${payload.message}\n`;
+    } else if (event === 'done') {
+      if (payload.status === 'ok') {
+        const msg = I18N.success_tpl
+          .replace('{id}', payload.node_id)
+          .replace('{port}', payload.panel_inbound_port);
+        status.innerHTML = `<span class="badge active">${msg}</span>
+          <a href="/admin/nodes" class="btn btn-sm" style="margin-left:0.5rem">${I18N.view_nodes} →</a>`;
+      } else {
+        status.innerHTML = `<span class="badge error">${I18N.failed}</span> <span class="soft">${payload.message || ''}</span>`;
+      }
+    }
+  }
+})();
+</script>
+{% endblock %}

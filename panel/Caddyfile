@@ -1,0 +1,36 @@
+{$PANEL_HOST} {
+    # Automatic HTTPS via Let's Encrypt (HTTP-01 / TLS-ALPN-01).
+    # Caddy needs ports 80 and 443 open on the host (already done via ufw).
+
+    # Compression for HTML/JSON/JS
+    encode zstd gzip
+
+    # Security headers
+    header {
+        Strict-Transport-Security  "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options     "nosniff"
+        X-Frame-Options            "DENY"
+        Referrer-Policy            "strict-origin-when-cross-origin"
+        Permissions-Policy         "interest-cohort=()"
+        # Don't reveal that this is Caddy
+        -Server
+    }
+
+    # Reverse-proxy everything to the FastAPI app.
+    reverse_proxy panel-api:8000 {
+        # Pass real client info downstream.
+        header_up X-Real-IP        {remote_host}
+        header_up X-Forwarded-For  {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        # Long-lived SSE for /admin/nodes/provision streaming
+        flush_interval -1
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+        format json
+    }
+}

@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% set active = 'users' %}
+{% block title %}{{ t('users.edit.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="row" style="margin-bottom:1.25rem">
+  <a href="/admin/users" class="btn ghost btn-sm">{{ icon('arrow-left') }} {{ t('common.back') }}</a>
+</div>
+
+<h1 style="margin-bottom:1.25rem">{{ t('users.edit.title') }}</h1>
+
+<div class="card" style="max-width:560px">
+  <form method="post" action="/admin/users/{{ user.id }}/edit" class="stack">
+    <div class="field">
+      <label>{{ t('users.field.email') }}</label>
+      <input name="email" type="email" required value="{{ user.email }}">
+    </div>
+    <div class="field">
+      <label>
+        {{ t('users.field.password') }}
+        <span class="hint">— {{ t('users.edit.password_hint') }}</span>
+      </label>
+      <input name="password" type="password" autocomplete="new-password">
+    </div>
+    <div class="field-row cols-2">
+      <div class="field">
+        <label>{{ t('users.field.role') }}</label>
+        <select name="role">
+          <option value="user"  {{ 'selected' if user.role.value == 'user'  }}>{{ t('users.role.user') }}</option>
+          <option value="admin" {{ 'selected' if user.role.value == 'admin' }}>{{ t('users.role.admin') }}</option>
+        </select>
+      </div>
+      <div class="field" style="align-self:end">
+        <label style="margin-bottom:0.6rem">
+          <input type="checkbox" name="is_active" value="1" {{ 'checked' if user.is_active }}>
+          {{ t('users.field.is_active') }}
+        </label>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between; margin-top:0.5rem">
+      <button class="primary" type="submit">{{ icon('save') }} {{ t('common.save') }}</button>
+      {% if user.id != admin.id %}
+      <form method="post" action="/admin/users/{{ user.id }}/delete" style="margin:0"
+            hx-confirm="{{ t('users.confirm_delete', email=user.email) }}">
+        <button class="danger" type="submit">{{ icon('trash') }} {{ t('common.delete') }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}
