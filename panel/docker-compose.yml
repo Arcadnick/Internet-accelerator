@@ -34,6 +34,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      PANEL_ENV: ${PANEL_ENV:-dev}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-panel}:${POSTGRES_PASSWORD:-panel}@postgres:5432/${POSTGRES_DB:-panel}
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
@@ -64,6 +65,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      PANEL_ENV: ${PANEL_ENV:-dev}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-panel}:${POSTGRES_PASSWORD:-panel}@postgres:5432/${POSTGRES_DB:-panel}
       REDIS_URL: redis://redis:6379/0
       PANEL_XRAY_API_ADDR: ${PANEL_XRAY_API_ADDR:-host.docker.internal:10085}
