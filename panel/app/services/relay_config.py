@@ -18,7 +18,7 @@ from app.models import Node, Subscription, SubscriptionStatus
 
 API_INBOUND = {
     "tag": "api",
-    "listen": "127.0.0.1",
+    "listen": "0.0.0.0",
     "port": 10085,
     "protocol": "dokodemo-door",
     "settings": {"address": "127.0.0.1"},
