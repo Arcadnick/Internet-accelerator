@@ -5,12 +5,15 @@ API (typically host.docker.internal:10085 from inside the panel container).
 Each invocation atomically reads-and-resets the counters, so we never
 double-count even if a task firing overlaps the previous one.
 
-Output of `xray api statsquery` looks like:
-    user>>>u1-abcd@panel>>>traffic>>>uplink: 12345
-    user>>>u1-abcd@panel>>>traffic>>>downlink: 67890
+Output of `xray api statsquery` is JSON:
+    {"stat": [
+        {"name": "user>>>u1-abcd@panel>>>traffic>>>uplink",   "value": "12345"},
+        {"name": "user>>>u1-abcd@panel>>>traffic>>>downlink", "value": "67890"}
+    ]}
 """
 
 import asyncio
+import json
 import logging
 import re
 from collections import defaultdict
@@ -24,8 +27,8 @@ from app.models import Subscription, TrafficLog
 
 logger = logging.getLogger(__name__)
 
-_STAT_LINE = re.compile(
-    r"^user>>>(?P<email>[^>]+)>>>traffic>>>(?P<direction>uplink|downlink):\s*(?P<bytes>\d+)$"
+_STAT_NAME = re.compile(
+    r"^user>>>(?P<email>[^>]+)>>>traffic>>>(?P<direction>uplink|downlink)$"
 )
 
 
@@ -49,14 +52,19 @@ async def _query_user_stats(api_addr: str) -> dict[str, dict[str, int]]:
             f"xray api statsquery failed (rc={proc.returncode}): {stderr.decode().strip()}"
         )
 
+    try:
+        payload = json.loads(stdout.decode() or "{}")
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"xray api statsquery returned non-JSON: {e}") from e
+
     result: dict[str, dict[str, int]] = defaultdict(lambda: {"up": 0, "down": 0})
-    for line in stdout.decode().splitlines():
-        m = _STAT_LINE.match(line.strip())
+    for entry in payload.get("stat") or []:
+        m = _STAT_NAME.match(entry.get("name", ""))
         if not m:
             continue
         email = m.group("email")
         direction = "up" if m.group("direction") == "uplink" else "down"
-        result[email][direction] = int(m.group("bytes"))
+        result[email][direction] = int(entry.get("value", "0"))
     return dict(result)
 
 
