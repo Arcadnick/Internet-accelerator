@@ -33,7 +33,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
+    environment: &panel_env
       PANEL_ENV: ${PANEL_ENV:-dev}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-panel}:${POSTGRES_PASSWORD:-panel}@postgres:5432/${POSTGRES_DB:-panel}
       REDIS_URL: redis://redis:6379/0
@@ -64,11 +64,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      PANEL_ENV: ${PANEL_ENV:-dev}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-panel}:${POSTGRES_PASSWORD:-panel}@postgres:5432/${POSTGRES_DB:-panel}
-      REDIS_URL: redis://redis:6379/0
-      PANEL_XRAY_API_ADDR: ${PANEL_XRAY_API_ADDR:-host.docker.internal:10085}
+    environment: *panel_env
+    volumes:
+      - xray_config:/xray
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: arq app.workers.tasks.WorkerSettings
