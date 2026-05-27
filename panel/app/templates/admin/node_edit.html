@@ -1,0 +1,79 @@
+{% extends "admin/base.html" %}
+{% from "admin/_icons.html" import icon %}
+{% set active = 'nodes' %}
+{% block title %}{{ t('nodes.edit.title') }} · {{ t('brand') }}{% endblock %}
+{% block admin_content %}
+<div class="row" style="margin-bottom:1.25rem">
+  <a href="/admin/nodes" class="btn ghost btn-sm">{{ icon('arrow-left') }} {{ t('common.back') }}</a>
+</div>
+
+<h1 style="margin-bottom:0.25rem">{{ t('nodes.edit.title') }} #{{ node.id }}</h1>
+<p class="muted" style="margin-top:0;margin-bottom:1.25rem">
+  <strong>{{ node.country_code }}</strong> · <code>{{ node.panel_inbound_tag }}</code> :{{ node.panel_inbound_port }}
+</p>
+
+<div class="card" style="max-width:680px">
+  <form method="post" action="/admin/nodes/{{ node.id }}/edit" class="stack">
+    <div class="field-row cols-2-1">
+      <div class="field">
+        <label>{{ t('nodes.field.label') }}</label>
+        <input name="label" required value="{{ node.label }}" maxlength="64">
+      </div>
+      <div class="field">
+        <label>{{ t('nodes.field.ssh_port') }}</label>
+        <input name="ssh_port" type="number" value="{{ node.ssh_port }}" min="1" max="65535">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>{{ t('nodes.field.host') }}</label>
+      <input name="host" required value="{{ node.host }}">
+    </div>
+
+    <div class="field">
+      <label>{{ t('nodes.field.s2s_password') }}
+        <span class="hint">— {{ t('nodes.field.s2s_password.hint') }}</span>
+      </label>
+      <input name="s2s_password" required minlength="8" value="{{ node.s2s_password }}">
+    </div>
+
+    <div class="field-row cols-2-1">
+      <div class="field">
+        <label>{{ t('nodes.field.s2s_sni') }}</label>
+        <input name="s2s_sni" required value="{{ node.s2s_sni }}">
+      </div>
+      <div class="field" style="align-self:end">
+        <label style="margin-bottom:0.6rem">
+          <input type="checkbox" name="s2s_allow_insecure" value="1"
+                 {{ 'checked' if node.s2s_allow_insecure }}>
+          {{ t('nodes.field.allow_insecure') }}
+        </label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>{{ t('nodes.field.status') }}</label>
+      <select name="status">
+        {% for s in ['active', 'disabled'] %}
+          <option value="{{ s }}" {{ 'selected' if node.status.value == s }}>{{ t('status.' + s) }}</option>
+        {% endfor %}
+        {% if node.status.value in ('provisioning', 'error') %}
+          <option value="{{ node.status.value }}" selected disabled>{{ t('status.' + node.status.value) }}</option>
+        {% endif %}
+      </select>
+    </div>
+
+    <p class="soft" style="margin:0">
+      {{ t('nodes.edit.locked_hint') }}
+    </p>
+
+    <div class="row" style="justify-content:space-between; margin-top:0.5rem">
+      <button class="primary" type="submit">{{ icon('save') }} {{ t('common.save') }}</button>
+      <form method="post" action="/admin/nodes/{{ node.id }}/delete" style="margin:0"
+            hx-confirm="{{ t('nodes.confirm_delete', label=node.label) }}">
+        <button class="danger" type="submit">{{ icon('trash') }} {{ t('common.delete') }}</button>
+      </form>
+    </div>
+  </form>
+</div>
+{% endblock %}

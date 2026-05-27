@@ -19,6 +19,18 @@ class NodeCreate(BaseModel):
     s2s_allow_insecure: bool = False
 
 
+class NodeUpdate(BaseModel):
+    """Editable fields on an existing node. All optional — only sent fields apply."""
+
+    label: str | None = Field(default=None, min_length=1, max_length=64)
+    host: str | None = Field(default=None, min_length=1, max_length=255)
+    ssh_port: int | None = Field(default=None, ge=1, le=65535)
+    s2s_password: str | None = Field(default=None, min_length=8, max_length=128)
+    s2s_sni: str | None = Field(default=None, min_length=1, max_length=255)
+    s2s_allow_insecure: bool | None = None
+    status: NodeStatus | None = None
+
+
 class NodeOut(BaseModel):
     id: int
     country_code: str

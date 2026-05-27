@@ -341,6 +341,56 @@ async def create_node_html(
         )
 
 
+@router.get("/nodes/{node_id}/edit", response_class=HTMLResponse)
+async def node_edit_page(
+    node_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    admin: Annotated[User, Depends(require_admin)],
+) -> Response:
+    node = await db.get(Node, node_id)
+    if node is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return render(request, "admin/node_edit.html", {"node": node, "admin": admin})
+
+
+@router.post("/nodes/{node_id}/edit")
+async def node_edit_submit(
+    node_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    admin: Annotated[User, Depends(require_admin)],
+    label: Annotated[str, Form()],
+    host: Annotated[str, Form()],
+    s2s_password: Annotated[str, Form()],
+    s2s_sni: Annotated[str, Form()],
+    ssh_port: Annotated[int, Form()] = 22,
+    s2s_allow_insecure: Annotated[str | None, Form()] = None,
+    status: Annotated[str, Form()] = "active",
+) -> Response:
+    node = await db.get(Node, node_id)
+    if node is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+    try:
+        node.label = label
+        node.host = host
+        node.ssh_port = ssh_port
+        node.s2s_password = s2s_password
+        node.s2s_sni = s2s_sni
+        node.s2s_allow_insecure = bool(s2s_allow_insecure)
+        node.status = NodeStatus(status)
+        await db.commit()
+        await rebuild_and_apply(db)
+        return RedirectResponse(
+            f"/admin/nodes?flash_kind=info&flash_message=Node+{label}+updated",
+            status_code=303,
+        )
+    except Exception as e:
+        return RedirectResponse(
+            f"/admin/nodes/{node_id}/edit?flash_kind=error&flash_message={_quote(str(e))}",
+            status_code=303,
+        )
+
+
 @router.post("/nodes/{node_id}/delete")
 async def delete_node_html(
     node_id: int,

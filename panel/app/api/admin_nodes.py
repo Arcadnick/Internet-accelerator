@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models import Node, NodeStatus, User
-from app.schemas.node import NodeCreate, NodeOut
+from app.schemas.node import NodeCreate, NodeOut, NodeUpdate
 from app.security import get_current_admin
 from app.services.node_allocator import (
     allocate_inbound_port,
@@ -49,6 +49,24 @@ async def create_node(
         status=NodeStatus.active,  # manual add: assume node is already ready
     )
     db.add(node)
+    await db.commit()
+    await db.refresh(node)
+    await rebuild_and_apply(db)
+    return node
+
+
+@router.patch("/{node_id}", response_model=NodeOut)
+async def update_node(
+    node_id: int,
+    body: NodeUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_admin)],
+) -> Node:
+    node = await db.get(Node, node_id)
+    if node is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(node, field, value)
     await db.commit()
     await db.refresh(node)
     await rebuild_and_apply(db)

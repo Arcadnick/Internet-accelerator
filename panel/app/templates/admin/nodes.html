@@ -35,6 +35,7 @@
           <td class="soft">{{ n.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
           <td>
             <div class="actions">
+              <a href="/admin/nodes/{{ n.id }}/edit" class="btn btn-sm">{{ icon('edit') }} {{ t('common.edit') }}</a>
               <form method="post" action="/admin/nodes/{{ n.id }}/delete" style="margin:0"
                     hx-confirm="{{ t('nodes.confirm_delete', label=n.label) }}">
                 <button class="danger btn-sm" type="submit">{{ icon('trash') }} {{ t('common.delete') }}</button>
