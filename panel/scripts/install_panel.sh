@@ -112,7 +112,7 @@ set -eu
 CFG="/usr/local/etc/xray/config.json"
 while inotifywait -qq -e close_write,moved_to "$(dirname "$CFG")"; do
     sleep 1   # debounce burst writes
-    if [[ -s "$CFG" ]] && /usr/local/bin/xray test -config "$CFG" >/dev/null 2>&1; then
+    if [[ -s "$CFG" ]] && /usr/local/bin/xray run -test -config "$CFG" >/dev/null 2>&1; then
         systemctl restart xray
         logger -t xray-watcher "config changed, xray restarted"
     else
