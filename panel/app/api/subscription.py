@@ -50,6 +50,6 @@ async def subscription(
         content=body,
         headers={
             "Profile-Update-Interval": "12",
-            "Profile-Title": f"VPN ({len(nodes)} locations)",
+            "Profile-Title": f"rubinVPN ({len(nodes)} locations)",
         },
     )
